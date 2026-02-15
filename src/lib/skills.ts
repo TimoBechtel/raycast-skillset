@@ -96,22 +96,6 @@ export function listSkills(rootPath: string): Skill[] {
   return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function searchSkills(rootPath: string, query: string, limit = 20): Skill[] {
-  const all = listSkills(rootPath);
-  if (!query.trim()) return all.slice(0, limit);
-  const q = query.toLowerCase().trim();
-  const scored: { skill: Skill; score: number }[] = [];
-  for (const skill of all) {
-    let score = 0;
-    if (skill.name.toLowerCase() === q) score = 100;
-    else if (skill.name.toLowerCase().includes(q)) score = 80;
-    if (skill.summary?.toLowerCase().includes(q)) score = Math.max(score, 50);
-    if (score > 0) scored.push({ skill, score });
-  }
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit).map((s) => s.skill);
-}
-
 export function readSkill(
   rootPath: string,
   name: string,

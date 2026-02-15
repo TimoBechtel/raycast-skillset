@@ -1,5 +1,5 @@
 {
-  "instructions": "You are an agent extended by a library of local 'skills'.\n\n### Core Philosophy\n- **Read-on-Demand**: You do not have skill instructions loaded. You must find and read them.\n- **Action-First**: You are an executor, not just an advisor. If a skill defines a command, YOU run it.\n\n### Workflow rules\n1. **Discovery**: Start with `list-all-skills` or `find-skills` to locate capabilities.\n2. **Ingestion**: You MUST use `read-skill` to load the `SKILL.md` or instructions.\n3. **Execution**:\n   - **Personas**: If the skill is a guide, ADOPT the persona strictly.\n   - **Scripts/Code**: If the skill describes a command or code (bash, python), **DO NOT just explain it**. You MUST use the `@shell` extension or any other tool that is available to you to execute it. If `@shell` is not active, you need to explicitly ask the user to 'mention @shell' to allow you to execute the command.\n   - **Attachments**: If the skill mentions supporting files, use `read-skill-attachment` to read them.",
+  "instructions": "You are an agent extended by a library of local 'skills'.\n\n### Core Philosophy\n- **Read-on-Demand**: You do not have skill instructions loaded. You must find and read them.\n- **Action-First**: You are an executor, not just an advisor. If a skill defines a command, YOU run it.\n\n### Workflow rules\n1. **Discovery**: Start with `list-all-skills` to locate capabilities.\n2. **Ingestion**: You MUST use `read-skill` to load the `SKILL.md` or instructions.\n3. **Execution**:\n   - **Personas**: If the skill is a guide, ADOPT the persona strictly.\n   - **Scripts/Code**: If the skill describes a command or code (bash, python), **DO NOT just explain it**. You MUST use the `@shell` extension or any other tool that is available to you to execute it. If `@shell` is not active, you need to explicitly ask the user to 'mention @shell' to allow you to execute the command.\n   - **Attachments**: If the skill mentions supporting files, use `read-skill-attachment` to read them.",
   "evals": [
     {
       "input": "@skillset what skills do you have?",
@@ -24,14 +24,7 @@
       "input": "@skillset help me write a better git commit message",
       "expected": [
         {
-          "callsTool": {
-            "name": "find-skills",
-            "arguments": {
-              "query": {
-                "includes": "git"
-              }
-            }
-          }
+          "callsTool": "list-all-skills"
         },
         {
           "callsTool": {
@@ -46,12 +39,6 @@
         }
       ],
       "mocks": {
-        "find-skills": [
-          {
-            "name": "git-commit",
-            "dir": "/Users/user/.agents/skills/git-commit"
-          }
-        ],
         "list-all-skills": [
           {
             "name": "git-commit",
@@ -79,12 +66,6 @@
         }
       ],
       "mocks": {
-        "find-skills": [
-          {
-            "name": "improve-writing",
-            "dir": "/Users/user/.agents/skills/improve-writing"
-          }
-        ],
         "read-skill": {
           "content": "Convert the given text to UPPERCASE."
         },
@@ -116,14 +97,14 @@
         }
       ],
       "mocks": {
-        "find-skills": [
+        "list-all-skills": [
           {
             "name": "checklist-maker",
             "dir": "/Users/user/.agents/skills/checklist-maker"
           }
         ],
         "read-skill": {
-          "content": "To generate a checklist, you must first read the template file located at 'templates/daily.md' and then print it."
+          "content": "To generate a checklist, you must first read the template file located at 'templates/daily.md' and then print it verbatim."
         },
         "read-skill-attachment": {
           "content": "- [ ] Drink water\n- [ ] Check emails"
@@ -146,12 +127,6 @@
         }
       ],
       "mocks": {
-        "find-skills": [
-          {
-            "name": "system-cleanup",
-            "dir": "/Users/user/.agents/skills/system-cleanup"
-          }
-        ],
         "list-all-skills": [
           {
             "name": "system-cleanup",

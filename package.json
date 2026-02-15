@@ -29,11 +29,6 @@
       "description": "Returns a list of installed skills. Use first to discover available capabilities."
     },
     {
-      "name": "find-skills",
-      "title": "Find Skills",
-      "description": "Search skills by keyword/capability (e.g., 'coding', 'writing'). Use when a specific capability is implied."
-    },
-    {
       "name": "read-skill",
       "title": "Read Skill Content",
       "description": "Get a skill's full instructions. REQUIRED before using any skill."
