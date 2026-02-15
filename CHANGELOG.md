@@ -1,4 +1,4 @@
-# Skills Changelog
+# Skillset Changelog
 
 ## [Initial Version] - 2026-02-15
 
