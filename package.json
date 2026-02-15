@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "skills",
-  "title": "Skills",
-  "description": "Gives Raycast access to installed skills",
+  "name": "skillset",
+  "title": "Skillset",
+  "description": "Adds support for skills to Raycast AI.",
   "icon": "extension-icon.png",
   "author": "TimoBechtel",
   "platforms": [
@@ -16,10 +16,43 @@
   "license": "MIT",
   "commands": [
     {
-      "name": "ask-skills",
-      "title": "Ask Skills",
-      "description": "",
+      "name": "search-skills",
+      "title": "Search Skills",
+      "description": "Search and preview your installed skills",
       "mode": "view"
+    }
+  ],
+  "tools": [
+    {
+      "name": "list-all-skills",
+      "title": "List All Skills",
+      "description": "Returns a list of installed skills. Use first to discover available capabilities."
+    },
+    {
+      "name": "find-skills",
+      "title": "Find Skills",
+      "description": "Search skills by keyword/capability (e.g., 'coding', 'writing'). Use when a specific capability is implied."
+    },
+    {
+      "name": "read-skill",
+      "title": "Read Skill Content",
+      "description": "Get a skill's full instructions. REQUIRED before using any skill."
+    },
+    {
+      "name": "read-skill-attachment",
+      "title": "Read Skill Attachment",
+      "description": "Read supporting files (templates, examples) referenced by a skill. Expects a relative path."
+    }
+  ],
+  "preferences": [
+    {
+      "name": "skillsDirectory",
+      "title": "Skills Directory",
+      "description": "Path to your skills folder (e.g. ~/.agents/skills or ~/.cursor/skills)",
+      "type": "directory",
+      "required": true,
+      "placeholder": "~/.agents/skills",
+      "default": "~/.agents/skills"
     }
   ],
   "dependencies": {
