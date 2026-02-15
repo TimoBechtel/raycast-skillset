@@ -34,25 +34,30 @@ export default function Command() {
   const root = prefs.skillsDirectory?.trim() ?? "";
   const [skills, setSkills] = useState<Skill[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
+    setHasLoaded(false);
     if (!root) {
       setError("Skills directory not configured");
       setSkills([]);
+      setHasLoaded(true);
       return;
     }
     try {
       const result = listSkills(root);
       setSkills(result);
       setError(null);
+      setHasLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setSkills([]);
+      setHasLoaded(true);
     }
   }, [root]);
 
   return (
-    <List isLoading={!!root && skills.length === 0 && !error} searchBarPlaceholder="Search skills...">
+    <List isLoading={!!root && !hasLoaded && !error} searchBarPlaceholder="Search skills...">
       {error && (
         <List.EmptyView title={root ? "Could not read skills" : "Skills directory not set"} description={error} />
       )}
