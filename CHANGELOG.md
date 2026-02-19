@@ -1,5 +1,3 @@
 # Skillset Changelog
 
-## [Initial Version] - 2026-02-15
-
-- Initial version
+## [Initial Version] - {PR_MERGE_DATE}
