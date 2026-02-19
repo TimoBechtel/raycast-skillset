@@ -11,7 +11,7 @@ type Input = {
 };
 
 /** Read a supporting file from a skill directory (templates, examples). Use when a skill references attachments. */
-export default function tool(input: Input): { content: string } {
+export default function tool(input: Input) {
   const prefs = getPreferenceValues<{ skillsDirectory: string }>();
   const root = prefs.skillsDirectory;
   if (!root) {

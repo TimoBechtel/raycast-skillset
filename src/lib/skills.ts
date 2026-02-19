@@ -1,6 +1,6 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
-import { isWithinRoot, resolveSkillsRoot } from "./paths";
 
 export type Skill = {
   name: string;
@@ -8,11 +8,9 @@ export type Skill = {
   summary?: string;
 };
 
-const SKILL_FILES = ["SKILL.md"];
-const MAX_CONTENT_CHARS = 100_000;
-const MAX_SKILL_FILES = 100;
+export const SKILL_FILE = "SKILL.md";
 
-function listSkillFiles(skillDir: string, maxFiles = MAX_SKILL_FILES): string[] {
+function listSkillFiles(skillDir: string, maxFiles = 100) {
   const files: string[] = [];
   if (!fs.existsSync(skillDir) || !fs.statSync(skillDir).isDirectory()) return files;
 
@@ -20,38 +18,36 @@ function listSkillFiles(skillDir: string, maxFiles = MAX_SKILL_FILES): string[] 
     if (files.length >= maxFiles) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (files.length >= maxFiles) return;
       const relPath = path.join(relBase, entry.name);
       if (entry.isDirectory()) {
         walk(path.join(dir, entry.name), relPath);
-      } else if (entry.isFile() && entry.name !== "SKILL.md") {
+      } else if (entry.isFile() && entry.name !== SKILL_FILE) {
         files.push(relPath);
       }
+      if (files.length >= maxFiles) return;
     }
   }
   walk(skillDir, "");
   return files;
 }
 
-export type SkillMetadata = Record<string, string>;
-
-function parseFrontmatter(raw: string): { frontmatter: SkillMetadata; body: string } {
+function parseFrontmatter(raw: string) {
   const match = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
   if (!match) return { frontmatter: {}, body: raw };
   const [, fm, body] = match;
-  const frontmatter: SkillMetadata = {};
-  for (const line of fm.split("\n")) {
-    const colon = line.indexOf(":");
-    if (colon > 0) {
-      const key = line.slice(0, colon).trim();
-      const value = line.slice(colon + 1).trim();
-      if (key && value) frontmatter[key] = value;
-    }
-  }
+  const frontmatter = Object.fromEntries(
+    fm
+      .split("\n")
+      .map((line) => {
+        const i = line.indexOf(":");
+        return [line.slice(0, i).trim(), line.slice(i + 1).trim()];
+      })
+      .filter(([k, v]) => k && v),
+  ) as Record<string, string>;
   return { frontmatter, body: body.trim() };
 }
 
-function extractSummary(content: string): string | undefined {
+function extractSummary(content: string) {
   const match = content.match(/^description:\s*(.+)$/m);
   if (match) return match[1].trim();
   const firstH1 = content.match(/^#\s+(.+)$/m);
@@ -60,87 +56,69 @@ function extractSummary(content: string): string | undefined {
   return firstLine?.trim().slice(0, 120);
 }
 
-export function getSkillsRoot(prefsPath: string): string {
-  return resolveSkillsRoot(prefsPath);
-}
-
-export function listSkills(rootPath: string): Skill[] {
-  const root = getSkillsRoot(rootPath);
-  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
-    return [];
-  }
-  const skills: Skill[] = [];
+export async function listSkills(rootPath: string) {
+  const root = resolveSkillsRoot(rootPath);
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) return [];
   const entries = fs.readdirSync(root, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const dirPath = path.join(root, entry.name);
-    for (const fileName of SKILL_FILES) {
-      const filePath = path.join(dirPath, fileName);
-      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+  const results = await Promise.all(
+    entries
+      .filter((e) => e.isDirectory())
+      .map(async (entry) => {
+        const dirPath = path.join(root, entry.name);
+        const filePath = path.join(dirPath, SKILL_FILE);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return null;
         let summary: string | undefined;
         try {
-          const content = fs.readFileSync(filePath, "utf-8");
-          summary = extractSummary(content);
+          summary = extractSummary(await fs.promises.readFile(filePath, "utf-8"));
         } catch {
           // ignore
         }
-        skills.push({
-          name: entry.name,
-          dir: dirPath,
-          summary,
-        });
-        break;
-      }
-    }
-  }
+        const skill: Skill = { name: entry.name, dir: dirPath };
+        if (summary) skill.summary = summary;
+        return skill;
+      }),
+  );
+  const skills = results.filter((s): s is Skill => s !== null);
   return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function readSkill(
-  rootPath: string,
-  name: string,
-  maxChars = MAX_CONTENT_CHARS,
-): { content: string; metadata: SkillMetadata; skill: Skill; files: string[] } {
-  const root = getSkillsRoot(rootPath);
+function findSkillDir(root: string, name: string) {
+  const nameLower = name.trim().toLowerCase();
+  const dirs = fs
+    .readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(root, e.name, SKILL_FILE)))
+    .map((e) => e.name);
+
+  const exact = dirs.find((n) => n.toLowerCase() === nameLower);
+  if (exact) return path.join(root, exact);
+
+  const fuzzy = dirs.filter((n) => n.toLowerCase().includes(nameLower));
+  if (fuzzy.length === 0) throw new Error(`No skill found matching "${name}". Available: ${dirs.join(", ")}`);
+  if (fuzzy.length > 1) throw new Error(`Multiple skills match "${name}": ${fuzzy.join(", ")}. Be more specific.`);
+  return path.join(root, fuzzy[0]);
+}
+
+export function readSkill(rootPath: string, name: string, maxChars = 100_000) {
+  const root = resolveSkillsRoot(rootPath);
   if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
     throw new Error(`Skills directory not found: ${rootPath}`);
   }
-  const all = listSkills(rootPath);
-  const nameLower = name.trim().toLowerCase();
-  let candidates = all.filter((s) => s.name.toLowerCase() === nameLower);
-  if (candidates.length === 0) {
-    candidates = all.filter((s) => s.name.toLowerCase().includes(nameLower));
-  }
-  if (candidates.length === 0) {
-    throw new Error(`No skill found matching "${name}". Available: ${all.map((s) => s.name).join(", ")}`);
-  }
-  if (candidates.length > 1 && !candidates.some((s) => s.name.toLowerCase() === nameLower)) {
-    throw new Error(`Multiple skills match "${name}": ${candidates.map((s) => s.name).join(", ")}. Be more specific.`);
-  }
-  const skill = candidates[0];
-  const filePath = path.join(skill.dir, "SKILL.md");
-  if (!isWithinRoot(filePath, root)) {
-    throw new Error("Invalid path: outside skills directory");
-  }
+  const skillDir = findSkillDir(root, name);
+  const skill: Skill = { name: path.basename(skillDir), dir: skillDir };
+  const filePath = path.join(skillDir, SKILL_FILE);
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     throw new Error(`Skill file not found: ${skill.dir}`);
   }
   const raw = fs.readFileSync(filePath, "utf-8");
   const { frontmatter, body } = parseFrontmatter(raw);
   const truncated = body.length > maxChars;
-  const content = truncated ? body.slice(0, maxChars) + "\n\n[... truncated ...]" : body;
-  const skillDir = path.dirname(filePath);
+  const content = truncated ? body.slice(0, maxChars) + "\n\n[... Truncated. Increase maxChars to see more ...]" : body;
   const files = listSkillFiles(skillDir);
   return { content, metadata: frontmatter, skill, files };
 }
 
-export function readSkillFile(
-  rootPath: string,
-  skillName: string,
-  filePath: string,
-  maxChars = MAX_CONTENT_CHARS,
-): string {
-  const root = getSkillsRoot(rootPath);
+export function readSkillFile(rootPath: string, skillName: string, filePath: string, maxChars = 100_000) {
+  const root = resolveSkillsRoot(rootPath);
   if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
     throw new Error(`Skills directory not found: ${rootPath}`);
   }
@@ -156,5 +134,23 @@ export function readSkillFile(
     throw new Error(`File not found: ${filePath}`);
   }
   const raw = fs.readFileSync(resolved, "utf-8");
-  return raw.length > maxChars ? raw.slice(0, maxChars) + "\n\n[... truncated ...]" : raw;
+  return raw.length > maxChars
+    ? raw.slice(0, maxChars) + "\n\n[... Truncated. Increase maxChars to see more ...]"
+    : raw;
+}
+
+function expandHomeDir(p: string) {
+  if (p.startsWith("~")) return path.normalize(p.replace(/^~/, os.homedir()));
+  return p;
+}
+
+function resolveSkillsRoot(rawPath: string) {
+  if (!rawPath?.trim()) throw new Error("Skills directory path is required");
+  return path.resolve(expandHomeDir(rawPath.trim()));
+}
+
+function isWithinRoot(child: string, root: string) {
+  const c = path.resolve(child);
+  const r = path.resolve(root);
+  return c === r || c.startsWith(r + path.sep);
 }

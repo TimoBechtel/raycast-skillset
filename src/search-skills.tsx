@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Detail, getPreferenceValues, Icon, List } from "@raycast/api";
+import { useCachedPromise } from "@raycast/utils";
 import * as path from "path";
-import { useEffect, useState } from "react";
-import { listSkills, readSkill, type Skill } from "./lib/skills";
+import { listSkills, readSkill, SKILL_FILE, type Skill } from "./lib/skills";
 
 function SkillDetail({ skill, root }: { skill: Skill; root: string }) {
   const { content, metadata } = readSkill(root, skill.name);
@@ -22,7 +22,7 @@ function SkillDetail({ skill, root }: { skill: Skill; root: string }) {
       actions={
         <ActionPanel>
           <Action.CopyToClipboard title="Copy Name" content={skill.name} />
-          <Action.OpenWith path={path.join(skill.dir, "SKILL.md")} />
+          <Action.OpenWith path={path.join(skill.dir, SKILL_FILE)} />
         </ActionPanel>
       }
     />
@@ -32,39 +32,16 @@ function SkillDetail({ skill, root }: { skill: Skill; root: string }) {
 export default function Command() {
   const prefs = getPreferenceValues<{ skillsDirectory: string }>();
   const root = prefs.skillsDirectory?.trim() ?? "";
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-
-  useEffect(() => {
-    setHasLoaded(false);
-    if (!root) {
-      setError("Skills directory not configured");
-      setSkills([]);
-      setHasLoaded(true);
-      return;
-    }
-    try {
-      const result = listSkills(root);
-      setSkills(result);
-      setError(null);
-      setHasLoaded(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setSkills([]);
-      setHasLoaded(true);
-    }
-  }, [root]);
+  const { data: skills, isLoading, error } = useCachedPromise(listSkills, [root], { execute: !!root });
 
   return (
-    <List isLoading={!!root && !hasLoaded && !error} searchBarPlaceholder="Search skills...">
-      {error && (
-        <List.EmptyView title={root ? "Could not read skills" : "Skills directory not set"} description={error} />
-      )}
-      {!error && skills.length === 0 && root && (
+    <List isLoading={isLoading} searchBarPlaceholder="Search skills...">
+      {!root && <List.EmptyView title="Skills directory not set" description="Configure in extension preferences" />}
+      {root && error && <List.EmptyView title="Could not read skills" description={error.message} />}
+      {root && !error && skills?.length === 0 && (
         <List.EmptyView title="No skills found" description={`Add SKILL.md files in subdirectories of ${root}`} />
       )}
-      {skills.map((skill) => (
+      {(skills ?? []).map((skill) => (
         <List.Item
           key={skill.name}
           id={skill.name}
@@ -75,7 +52,7 @@ export default function Command() {
             <ActionPanel>
               <Action.Push title="View Details" icon={Icon.Eye} target={<SkillDetail skill={skill} root={root} />} />
               <Action.CopyToClipboard title="Copy Name" content={skill.name} />
-              <Action.OpenWith path={path.join(skill.dir, "SKILL.md")} />
+              <Action.OpenWith path={path.join(skill.dir, SKILL_FILE)} />
             </ActionPanel>
           }
         />

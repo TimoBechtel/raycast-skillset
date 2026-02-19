@@ -9,16 +9,10 @@ type Input = {
 };
 
 /** Read the full content of a specific skill. REQUIRED before using any skill. */
-export default function tool(input: Input): {
-  content: string;
-  skill: { name: string; dir: string };
-  files: string[];
-} {
+export default function tool(input: Input) {
   const prefs = getPreferenceValues<{ skillsDirectory: string }>();
   const root = prefs.skillsDirectory;
-  if (!root) {
-    throw new Error("Skills directory not configured. Open extension preferences to set it.");
-  }
+  if (!root) throw new Error("Skills directory not configured. Open extension preferences to set it.");
   const { content, skill, files } = readSkill(root, input.name, input.maxChars);
   return { content, skill: { name: skill.name, dir: skill.dir }, files };
 }
