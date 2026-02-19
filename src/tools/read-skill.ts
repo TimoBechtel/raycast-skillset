@@ -4,7 +4,7 @@ import { readSkill } from "../lib/skills";
 type Input = {
   /** Skill name (e.g. frontend-design) */
   name: string;
-  /** Optional max characters to return (default 100000) */
+  /** Optional max characters to return (default 100000). Only set this, if you see a truncation warning. */
   maxChars?: number;
 };
 

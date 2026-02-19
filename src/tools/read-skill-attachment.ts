@@ -6,7 +6,7 @@ type Input = {
   skillName: string;
   /** Relative path within skill directory (e.g. templates/daily.md) */
   filePath: string;
-  /** Optional max characters to return (default 100000) */
+  /** Optional max characters to return (default 100000). Only set this, if you see a truncation warning. */
   maxChars?: number;
 };
 
