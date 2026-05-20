@@ -1,3 +1,8 @@
+> [!NOTE]
+> Raycast V2 includes skills support out of the box. So this extension is no longer needed.
+
+---
+
 # Skillset
 
 Adds support for skills to Raycast AI.
